@@ -15,6 +15,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <body>
         <a href="#main" className="skip-link">تجاوز إلى المحتوى</a>
         {children}
+        <footer dir="ltr" className="border-t border-line px-6 py-5 text-center text-xs text-muted">
+          © 2026 Eqraa · Made with 💚 by Mohamed Saad
+        </footer>
       </body>
     </html>
   );

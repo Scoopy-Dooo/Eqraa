@@ -94,7 +94,6 @@ export default function Landing() {
         <p className="mx-auto max-w-[42ch] text-lg text-muted">{l.cta.body}</p>
         <CTAButtons />
       </section>
-      <footer className="border-t border-line px-6 py-8 text-center text-sm text-muted">{t.brand} · Eqraa</footer>
     </main>
   );
 }
