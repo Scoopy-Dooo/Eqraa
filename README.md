@@ -10,7 +10,7 @@
 ## Notifications (Phase 7)
 - Run `npm run gen-vapid` once and put the 3 printed lines in `.env` to enable Web Push. Without them, in-app inbox notifications still work; push just won't be delivered.
 - Reminders are now tied to the real 5 daily prayer times for Khartoum (Aladhan API, cached per date in `prayer_times`), configurable per-prayer in Admin → الإشعارات. Fajr is always the day boundary and cannot be turned off.
-- "New Khatmah started" is sent once, on a group's very first day, not on every daily rotation (that would be one push per member per day).
+- "New Khatmah started" is sent once, on a group's very first day, not on every daily rotation (that would be one push per member per day). 
 - iOS push only works after the PWA is added to the home screen (iOS 16.4+); full offline install support is Phase 8.
 
 ## PWA + Offline (Phase 8)
