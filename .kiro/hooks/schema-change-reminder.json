@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "schema-change-reminder",
+      "description": "عند تعديل جداول قاعدة البيانات، يذكّر بأن db:push يدوي دائمًا — هذا هو سبب أعطال 500 'relation does not exist' في هذا المشروع تحديدًا.",
+      "enabled": true,
+      "when": { "type": "fileEdited", "patterns": ["src/db/schema.ts"] },
+      "then": {
+        "type": "askAgent",
+        "prompt": "تم تعديل src/db/schema.ts. ذكّر المستخدم بوضوح أنه يجب تشغيل `npm run db:push` يدويًا على قاعدة البيانات الفعلية (نفس DATABASE_URL المستخدم في Vercel) بعد هذا التعديل، وإلا سيحصل خطأ 'relation does not exist' في الإنتاج تمامًا كما حدث سابقًا في هذا المشروع. اذكر أيضًا أي جدول أو عمود جديد أُضيف، للتأكد أن التعديل مقصود ولا يتعارض مع القيود الموثّقة في .kiro/steering/business-rules.md."
+      }
+    }
+  ]
+}

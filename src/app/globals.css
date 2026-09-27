@@ -1,0 +1,13 @@
+@import "tailwindcss";
+/* Fajr palette. Light = pale dawn sky; Dark = the hour before Fajr (designed, not inverted).
+   --dawn is the bright accent (buttons, borders, icons — only needs 3:1 contrast).
+   --dawn-text is a darkened variant for dawn-colored body text, meeting 4.5:1 on its background. */
+:root{--bg:#F3F6F8;--surface:#fff;--ink:#12212B;--muted:#5A6B77;--line:#DCE4E9;--primary:#1E6B5A;--on-primary:#fff;--dawn:#B9852F;--dawn-text:#8B6423;--danger:#B3372F}
+:root[data-theme=dark]{--bg:#0B1520;--surface:#122130;--ink:#E6EDF1;--muted:#93A4B0;--line:#1F3345;--primary:#5CC2A5;--on-primary:#062219;--dawn:#E0B25E;--dawn-text:#E0B25E;--danger:#F08A80}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0B1520;--surface:#122130;--ink:#E6EDF1;--muted:#93A4B0;--line:#1F3345;--primary:#5CC2A5;--on-primary:#062219;--dawn:#E0B25E;--dawn-text:#E0B25E;--danger:#F08A80}}
+@theme inline{--color-bg:var(--bg);--color-surface:var(--surface);--color-ink:var(--ink);--color-muted:var(--muted);--color-line:var(--line);--color-primary:var(--primary);--color-on-primary:var(--on-primary);--color-dawn:var(--dawn);--color-dawn-text:var(--dawn-text);--color-danger:var(--danger)}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Naskh Arabic","Geeza Pro","Segoe UI",system-ui,sans-serif;line-height:1.8;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:3px solid var(--dawn);outline-offset:2px}
+.skip-link{position:fixed;inset-inline-start:1rem;top:-3rem;z-index:100;background:var(--primary);color:var(--on-primary);padding:.6rem 1rem;border-radius:.75rem;transition:top .15s}
+.skip-link:focus{top:1rem}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

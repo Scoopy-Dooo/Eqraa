@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "pre-deploy-build-check",
+      "description": "تشغيل يدوي: بناء إنتاجي كامل قبل النشر على Vercel. يكتشف مشاكل لا يكتشفها فحص الأنواع وحده (حدود Server/Client Components، صفحات الـRouting).",
+      "enabled": true,
+      "when": { "type": "manual" },
+      "then": { "type": "command", "command": "npm run build" },
+      "timeout": 300
+    }
+  ]
+}
