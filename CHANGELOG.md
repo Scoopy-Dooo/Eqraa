@@ -139,6 +139,50 @@
 
 ---
 
+## [1.1.0] - 2026-09-28
+
+### ✨ Added | الميزات الجديدة
+
+#### تحسينات الملف الشخصي
+- **Avatars احترافية**: استبدال الـAvatars البسيطة بمكتبة DiceBear
+  - 30 خيار لكل جنس (60 إجمالي)
+  - SVG ديناميكي مع ألوان متعددة
+  - تصميم احترافي ومميز
+- **واجهة تعديل كاملة** في صفحة Profile:
+  - Modal لاختيار Avatar من شبكة 5×6
+  - Modal لتعديل الاسم (الأول والثاني)
+  - Modal لتغيير رقم الهاتف
+  - Modal لتغيير رمز PIN
+- **API Endpoint جديد**: `GET /api/profile` يجلب كل بيانات المستخدم دفعة واحدة
+- **Client-side validation**: التحقق من المدخلات قبل إرسالها للخادم
+- **Error handling محسّن**: رسائل خطأ واضحة بالعربية لكل حالة
+
+#### التحسينات التقنية
+- تحديث `Avatar.tsx` لاستخدام DiceBear `thumbs` style
+- تحويل `/profile` من Server Component إلى Client Component مع state management
+- إضافة dependency: `@dicebear/core` و `@dicebear/collection`
+- تحديث Zod validation في `/api/profile` لدعم الـ60 avatar الجديدة
+
+### 🔧 Changed | التعديلات
+- تحويل صفحة Profile من عرض فقط إلى تفاعلية مع Modals
+- تحسين UX: الـModals تغلق عند النقر خارجها
+- تأكيد تغيير PIN يلغي كل الجلسات الأخرى للأمان
+- Loading states أثناء حفظ التعديلات
+
+### 🐛 Fixed | الإصلاحات
+- إصلاح validation للـAvatars الجديدة في API endpoints
+
+### 📦 Dependencies
+- Added: `@dicebear/core@9.4.3`
+- Added: `@dicebear/collection@9.4.2`
+
+### ✅ Testing
+- **94 اختبار** لا يزالون يمرون جميعًا ✓
+- Type checking ناجح ✓
+- Production build ناجح ✓
+
+---
+
 ## [Unreleased] - المستقبل
 
 ### 🚀 Planned | مخطط لها

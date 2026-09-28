@@ -4,7 +4,7 @@ import type { NextConfig } from "next";
 // state-changing requests can't carry the session cookie — this is our CSRF defence (BR-43).
 const csp = [
   "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:", "font-src 'self' data:", "connect-src 'self'",
+  "img-src 'self' data: https://avataaars.io", "font-src 'self' data:", "connect-src 'self'",
   "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", "object-src 'none'",
 ].join("; ");
 const securityHeaders = [
