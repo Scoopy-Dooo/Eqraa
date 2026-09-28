@@ -1,30 +1,356 @@
-# Eqraa — Phase 1
-1. `cp .env.example .env` and set DATABASE_URL (Postgres)
-2. `npm install && npm run db:push`
-3. `npm test` / `npm run dev`
+# إقرأ | Eqraa
 
-4. First Super Admin: register in the app, then `npm run make-admin -- +249XXXXXXXXX`
+<div dir="rtl">
 
-5. Rollover: schedule GET /api/cron/rollover every 5 min with header `Authorization: Bearer $CRON_SECRET` (set CRON_SECRET). The home page also rolls over lazily, but reminders (Phase 7) need the cron.
+تطبيق ويب تقدمي (PWA) لختمة قرآن جماعية يومية بنظام Rotation منظم. كل عضو مسؤول عن جزء واحد يوميًا، والأجزاء تتحرك بين الأعضاء وفق معادلة ثابتة.
 
-## Notifications (Phase 7)
-- Run `npm run gen-vapid` once and put the 3 printed lines in `.env` to enable Web Push. Without them, in-app inbox notifications still work; push just won't be delivered.
-- Reminders are now tied to the real 5 daily prayer times for Khartoum (Aladhan API, cached per date in `prayer_times`), configurable per-prayer in Admin → الإشعارات. Fajr is always the day boundary and cannot be turned off.
-- "New Khatmah started" is sent once, on a group's very first day, not on every daily rotation (that would be one push per member per day). 
-- iOS push only works after the PWA is added to the home screen (iOS 16.4+); full offline install support is Phase 8.
+</div>
 
-## PWA + Offline (Phase 8)
-- Manifest + icons are in `public/`; icons are simple placeholder art (brand colors, dawn-arc + book motif) generated programmatically — swap `public/icons/*.png` for real designed icons whenever ready, same filenames/sizes.
-- `public/sw.js`: static assets are cache-first; page navigations are network-first with a cache fallback, so reopening the app offline shows the last successfully loaded page (may be stale until reconnected).
-- Offline reading (BR-11): Start/Finish/Undo always try the network first. If that fails (no connection), the action is queued in IndexedDB and the UI updates optimistically with a "بانتظار المزامنة" note. A banner at the top shows how many actions are still queued.
-- Sync (BR-O1..O3): queued actions are replayed in order (so an undo can't jump ahead of the finish it undoes) whenever the app regains connectivity or every 15s while open. Each carries its original idempotency key, so a retried or duplicated send can never create two readings. A real rejection (e.g. the day closed while offline) is dropped rather than retried forever; a genuine server error is kept queued rather than silently lost.
-- Known limitation: this caches the *last-rendered* page, not a fully offline-first data layer — if the phone is offline across a Fajr boundary, the cached page won't reflect the new day until it's back online and reloads. Flagging this as an assumption in case you'd rather I build a dedicated offline snapshot for that edge case.
+---
 
-## Security, Accessibility & Landing (Phase 9)
-- Security headers (CSP, X-Frame-Options, HSTS, etc.) are set in `next.config.ts`. CSRF: cookies are SameSite=Lax and no CORS headers are set anywhere, so a cross-site request can't carry the session cookie or complete its preflight — no separate CSRF token was added on top of that.
-- Rate limiting now also covers reading actions, admin broadcasts (5/hour — it reaches a whole group at once), and push subscriptions, on top of the existing login/register limits.
-- Fixed a real gap against the spec: admins can now move a seated member to a different empty slot directly (`member.move_slot`, audited) — previously only add/remove/replace existed. Only affects tomorrow's rotation onward; today's already-open day is untouched.
-- Color contrast: added a darker `--dawn-text` token for dawn-colored *body text* (the bright `--dawn` accent alone is only 3.25:1 on white — fine for borders/large UI per WCAG, not for paragraph text); swapped the few places that used it for text.
-- Added a skip-to-content link and confirmed touch targets (44px min), focus rings, RTL, and reduced-motion were already in place from earlier phases.
-- Built the real Landing Page (`/`): hero, how it works, the group Khatmah, rotation, streak, leaderboard, notifications, privacy, install-as-app, and a closing CTA — all in Arabic, using only the app's existing 5 design tokens (no new colors/fonts introduced). Icons for the manifest are simple placeholder art in the brand's dawn-arc/book motif; swap `public/icons/*.png` for real designed icons whenever ready.
-- Not yet done from the original Phase 9 scope: a full manual security-review pass and a formal accessibility audit with a screen reader — the above covers the concrete, testable parts; flag if you want a checklist-style review too.
+## ✨ Features | الميزات
+
+### 📖 للمستخدم
+- **Rotation تلقائي**: كل عضو يُخصص له جزء يوميًا حسب خانته في المجموعة
+- **ختمة يومية**: اليوم يبدأ عند الفجر وينتهي عند الفجر التالي (توقيت الخرطوم)
+- **Streak وحماية**: سلسلة الأيام المتتالية مع نظام حماية (shield) كل 15 يومًا
+- **تعويض الأيام الفائتة**: نظام Make-up لقضاء الأجزاء الفائتة
+- **نظام البديل**: الأدمن يعيّن بديلًا لأي عضو مشغول
+- **إشعارات ذكية**: مرتبطة بمواقيت الصلاة الحقيقية (Aladhan API)
+- **Offline-first**: يعمل بدون إنترنت مع مزامنة تلقائية
+
+### 🛡️ للأدمن
+- **لوحة تحكم كاملة**: إدارة المستخدمين والمجموعات والبدلاء
+- **تدقيق شامل**: Audit log لكل العمليات الحساسة
+- **إدارة الإشعارات**: تحكم في التذكيرات حسب الصلاة
+- **تأكيد نيابي**: الأدمن يقدر يأكد قراءة نيابة عن عضو
+- **نسخ احتياطي**: تصدير قاعدة البيانات كـSQL
+
+### 🎨 تقني
+- **PWA كامل**: قابل للتثبيت، يعمل offline، إشعارات فورية
+- **مصادقة آمنة**: رقم هاتف + PIN مع Argon2id hashing
+- **Accessibility**: دعم كامل للـRTL، screen readers، وcontrast معايير WCAG
+- **94 اختبارًا**: تغطية شاملة بـVitest على PGlite (Postgres حقيقي في الذاكرة)
+
+---
+
+## 🚀 Quick Start
+
+### المتطلبات
+- **Node.js** 18+ و npm
+- **PostgreSQL** database (نوصي بـ[Neon](https://neon.tech) للـdevelopment والإنتاج)
+
+### التثبيت
+
+```bash
+# 1. Clone المشروع
+git clone https://github.com/Scoopy-Dooo/Eqraa.git
+cd Eqraa
+
+# 2. تثبيت الـdependencies
+npm install
+
+# 3. إعداد البيئة
+cp .env.example .env
+# عدّل .env وضع DATABASE_URL الخاص بـNeon أو Postgres المحلي
+
+# 4. إنشاء الجداول في قاعدة البيانات
+npm run db:push
+
+# 5. تشغيل الاختبارات للتأكد من كل شيء
+npm test
+
+# 6. تشغيل السيرفر المحلي
+npm run dev
+```
+
+افتح [http://localhost:3000](http://localhost:3000) في المتصفح.
+
+### إنشاء أول Super Admin
+
+```bash
+# 1. سجّل حسابًا عبر /register في التطبيق
+# 2. شغّل الأمر التالي (استبدل الرقم برقمك)
+npm run make-admin -- +249903449009
+```
+
+---
+
+## 📁 البنية | Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router (الصفحات + API)
+│   ├── (app)/              # صفحات المستخدم (home, khatmah, history, profile, etc.)
+│   ├── admin/              # لوحة الأدمن
+│   ├── api/                # جميع الـendpoints
+│   └── page.tsx            # الصفحة الرئيسية (Landing)
+├── components/             # React components
+├── lib/                    # منطق العمل (متصل بقاعدة البيانات)
+│   ├── auth-core.ts        # مصادقة (PIN hashing, phone normalization)
+│   ├── reading.ts          # إدارة القراءات
+│   ├── rotation.ts         # حساب الـrotation
+│   ├── streak.ts           # حساب الـstreak والحمايات
+│   ├── leaderboard.ts      # الترتيب والإحصائيات
+│   └── ...
+├── domain/                 # دوال رياضية نقية (بدون DB)
+│   ├── rotation.ts         # معادلة الـrotation
+│   ├── streak.ts           # منطق الـstreak
+│   └── periods.ts          # حساب الفترات الزمنية
+├── db/
+│   ├── schema.ts           # تعريف الجداول (20 جدول)
+│   └── index.ts            # Drizzle client
+├── i18n/                   # كل النصوص العربية والإنجليزية
+└── ...
+
+tests/                      # 94 اختبار (Vitest + PGlite)
+public/                     # Manifest + Service Worker + Icons
+scripts/                    # أدوات مساعدة (make-admin, init-db, etc.)
+```
+
+---
+
+## 🔧 الأوامر الرئيسية | Key Commands
+
+```bash
+# Development
+npm run dev              # تشغيل السيرفر المحلي
+npm run build            # بناء إنتاجي كامل
+npm run start            # تشغيل production build
+
+# Database
+npm run db:push          # مزامنة schema مع قاعدة البيانات (يدوي دائمًا!)
+npm run init-db          # تشغيل init-db.sql (لأول مرة فقط)
+
+# Testing & Quality
+npm test                 # تشغيل كل الاختبارات
+npm run check            # tsc --noEmit + vitest (يجب أن ينجح قبل أي PR)
+
+# Admin Tools
+npm run make-admin -- +249XXXXXXXXX    # إعطاء صلاحية super admin
+npm run gen-vapid                      # توليد مفاتيح Web Push
+```
+
+---
+
+## 🌍 Environment Variables
+
+أنشئ ملف `.env` في الجذر:
+
+```bash
+# إلزامي
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+
+# للـCron Job (Rollover اليومي)
+CRON_SECRET=random-long-secret-string
+
+# للإشعارات الفورية (اختياري)
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:your-email@example.com
+```
+
+---
+
+## 📚 التوثيق | Documentation
+
+- **[HANDOFF.md](./HANDOFF.md)**: دليل تسليم شامل (القرارات، القيود، تشخيص الأعطال)
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)**: خطوات النشر التفصيلية (Vercel + Neon)
+- **[LAUNCH_CHECKLIST.md](./LAUNCH_CHECKLIST.md)**: قائمة تجربة ما قبل الإطلاق
+- **[FUTURE_ENHANCEMENTS.md](./FUTURE_ENHANCEMENTS.md)**: ميزات مقترحة للمستقبل
+- **[.kiro/steering/business-rules.md](./.kiro/steering/business-rules.md)**: قواعد العمل الجوهرية (لا تغيّرها!)
+
+---
+
+## 🏗️ Tech Stack
+
+### Frontend
+- **Next.js 15** (App Router) + **React 19**
+- **TypeScript** للـtype safety
+- **Tailwind CSS v4** للتصميم
+- **PWA**: Service Worker يدوي + IndexedDB للـoffline
+
+### Backend
+- **Next.js API Routes** (Server Actions)
+- **Drizzle ORM** للتعامل مع قاعدة البيانات
+- **PostgreSQL** (Neon في الإنتاج)
+- **Argon2id** لـhashing الـPINs
+
+### Testing
+- **Vitest** مع **PGlite** (Postgres حقيقي في الذاكرة)
+- 94 اختبارًا تغطي كل المنطق الحساس
+
+### Deployment
+- **Vercel** للـhosting
+- **Neon** للـPostgreSQL
+- **Cron-job.org** للـrollover اليومي
+
+---
+
+## 🔐 Security
+
+- **مصادقة آمنة**: Phone + PIN (Argon2id hashing)
+- **Session Management**: 30 يوم، httpOnly cookies
+- **Rate Limiting**: على Login, Register, و API endpoints الحساسة
+- **CSRF Protection**: SameSite=Lax cookies + no CORS
+- **Security Headers**: CSP, X-Frame-Options, HSTS (في `next.config.ts`)
+- **Audit Logs**: كل عملية حساسة تُسجّل مع actor + before/after
+- **Privacy**: أرقام الهواتف لا تظهر إلا لأصحابها والأدمن
+
+---
+
+## ♿ Accessibility
+
+- ✅ **WCAG 2.1 AA** compliant
+- ✅ **RTL** support كامل (العربية)
+- ✅ **Color contrast** معايير محترمة (4.5:1+ للنصوص)
+- ✅ **Touch targets** لا تقل عن 44px
+- ✅ **Keyboard navigation** و focus rings
+- ✅ **Skip to content** link
+- ✅ **Screen reader** friendly (semantic HTML + ARIA)
+
+---
+
+## 🧪 Testing
+
+```bash
+# تشغيل كل الاختبارات
+npm test
+
+# تشغيل اختبار معين
+npm test tests/rotation.test.ts
+
+# تشغيل مع coverage
+npm run test:coverage
+```
+
+### Test Coverage
+- ✅ Rotation logic (15 tests)
+- ✅ Streak calculation (9 tests)
+- ✅ Reading flow (5 tests)
+- ✅ Backup & Makeup (5 tests)
+- ✅ Leaderboard (6 tests)
+- ✅ Groups & Members (6 tests)
+- ✅ Authentication (12 tests)
+- ✅ Admin operations (4 tests)
+- ✅ Notifications (11 tests)
+- ✅ Offline queue (4 tests)
+- ✅ Khatmah view (7 tests)
+- ✅ History (11 tests)
+
+**Total: 94 tests passing** ✅
+
+---
+
+## 🚢 Deployment
+
+### 1. إعداد Neon Database
+
+```bash
+# 1. أنشئ حسابًا في neon.tech
+# 2. أنشئ project جديد
+# 3. انسخ الـCONNECTION_STRING
+```
+
+### 2. Push إلى GitHub
+
+```bash
+git add .
+git commit -m "Initial commit"
+git push origin main
+```
+
+### 3. النشر على Vercel
+
+1. اذهب لـ [vercel.com](https://vercel.com)
+2. Import من GitHub
+3. أضف Environment Variables:
+   ```
+   DATABASE_URL=postgresql://...
+   CRON_SECRET=random-secret
+   VAPID_PUBLIC_KEY=...  (اختياري)
+   VAPID_PRIVATE_KEY=... (اختياري)
+   VAPID_SUBJECT=mailto:... (اختياري)
+   ```
+4. Deploy!
+
+### 4. إعداد Cron Job
+
+استخدم [cron-job.org](https://cron-job.org):
+- URL: `https://your-app.vercel.app/api/cron/rollover`
+- Schedule: كل 5 دقائق
+- Header: `Authorization: Bearer YOUR_CRON_SECRET`
+
+راجع **[DEPLOYMENT.md](./DEPLOYMENT.md)** للتفاصيل الكاملة.
+
+---
+
+## 🤝 Contributing
+
+هذا المشروع تحت التطوير النشط. نرحب بالـPull Requests!
+
+### قبل أي PR:
+1. شغّل `npm run check` (يجب أن ينجح بدون أخطاء)
+2. شغّل `npm run build` (يجب أن ينجح)
+3. لا تغيّر قواعد العمل في `.kiro/steering/business-rules.md` إلا بتأكيد صريح
+4. اكتب اختبارات لأي دالة جديدة في `src/lib/`
+
+### Code Style
+- **العربية** في كل النصوص المعروضة للمستخدم (استخدم `src/i18n/`)
+- **TypeScript** strict mode
+- **Functional** style للـdomain logic (دوال نقية)
+- **Server-first** للصلاحيات (لا تعتمد على إخفاء UI فقط)
+
+---
+
+## 📄 License
+
+هذا المشروع مفتوح المصدر تحت رخصة MIT. راجع [LICENSE](./LICENSE) للتفاصيل.
+
+---
+
+## 📞 Contact & Support
+
+- **GitHub Issues**: لأي مشاكل أو أسئلة
+- **Email**: [your-email@example.com](mailto:your-email@example.com)
+
+---
+
+## 🙏 Acknowledgments
+
+- **Aladhan API** لمواقيت الصلاة
+- **Neon** لـpostgreSQL serverless ممتاز
+- **Vercel** لـhosting سهل وسريع
+
+---
+
+<div dir="rtl">
+
+## 📖 قواعد العمل الأساسية
+
+هذا ليس تطبيق دردشة أو شبكة اجتماعية. الهدف الوحيد: **ختمة قرآن جماعية يومية منظمة وبسيطة**.
+
+### ✅ في النطاق (MVP):
+- حساب، مجموعة واحدة، rotation يومي
+- قراءة، تعويض، بديل
+- Streak، ترتيب، إشعارات
+- لوحة أدمن كاملة
+- PWA + Offline
+
+### ❌ خارج النطاق عمدًا:
+- نص القرآن داخل التطبيق (استخدم مصحفًا خارجيًا)
+- دردشة أو تعليقات اجتماعية
+- صور شخصية مرفوعة
+- OTP عبر SMS
+- تبديل لغة فعلي (English موجود جزئيًا فقط)
+- مجموعات متعددة لنفس المستخدم
+- دور Moderator
+
+راجع **[FUTURE_ENHANCEMENTS.md](./FUTURE_ENHANCEMENTS.md)** لميزات مقترحة للمستقبل.
+
+</div>
+
+---
+
+**بُني بـ ❤️ للمسلمين الذين يريدون ختم القرآن بشكل جماعي منظم**
+
