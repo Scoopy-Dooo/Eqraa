@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { normalizePhone, isStrongPin, hashPin } from "@/lib/auth-core";
 import { startSession } from "@/lib/session";
-const Body = z.object({ firstName: z.string().trim().min(1).max(30), lastName: z.string().trim().max(30).optional(), phone: z.string(), pin: z.string(), gender: z.enum(["male", "female"]), avatarKey: z.string().regex(/^[a-z0-9-]{1,30}$/) });
+const Body = z.object({ firstName: z.string().trim().min(1).max(30), lastName: z.string().trim().max(30).optional(), phone: z.string(), pin: z.string(), gender: z.enum(["male", "female"]), avatarKey: z.string().min(1).max(500) });
 export async function POST(req: Request) {
   if (!rateLimit("register:" + clientIp(req), 10, 3600000)) return Response.json({ error: "rateLimited" }, { status: 429 });
   const b = Body.safeParse(await req.json().catch(() => null));
